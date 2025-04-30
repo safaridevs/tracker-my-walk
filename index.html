@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>Walking Route Tracker</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBt3PASmroPAJoJxnDAlTdA9SEDbnRh1Zg"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
     <style>
       html,
       body,
@@ -58,26 +58,29 @@
       let map,
         path = [],
         polyline,
-        watchId = null;
+        watchId = null,
+        marker = null,
+        lastLatLng = null;
 
       function initMap() {
         const defaultLocation = { lat: 35.687, lng: -105.9378 };
 
         map = new google.maps.Map(document.getElementById("map"), {
-          zoom: 18,
+          zoom: 19,
           center: defaultLocation,
+          mapTypeId: "hybrid", // Shows satellite + street labels
         });
 
         polyline = new google.maps.Polyline({
           path: path,
           geodesic: true,
-          strokeColor: "#FF0000",
+          strokeColor: "#00BFFF", // Bright blue
           strokeOpacity: 1.0,
-          strokeWeight: 3,
+          strokeWeight: 6, // Thicker line
           map: map,
         });
 
-        // Start Tracking
+        // Start tracking
         document.getElementById("startBtn").addEventListener("click", () => {
           document.getElementById("startBtn").style.display = "none";
           document.getElementById("stopBtn").style.display = "block";
@@ -94,6 +97,32 @@
                 path.push(current);
                 polyline.setPath(path);
                 map.setCenter(current);
+
+                // Rotate marker to show direction
+                if (marker) {
+                  const heading = computeHeading(lastLatLng, current);
+                  marker.setPosition(current);
+                  marker.setIcon({
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    scale: 5,
+                    rotation: heading,
+                    strokeColor: "#FF4500",
+                  });
+                } else {
+                  marker = new google.maps.Marker({
+                    position: current,
+                    map: map,
+                    icon: {
+                      path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                      scale: 5,
+                      rotation: 0,
+                      strokeColor: "#FF4500",
+                    },
+                    title: "You",
+                  });
+                }
+
+                lastLatLng = current;
               },
               (error) => {
                 console.error("Geolocation error:", error);
@@ -110,7 +139,7 @@
           }
         });
 
-        // Stop Tracking
+        // Stop tracking
         document.getElementById("stopBtn").addEventListener("click", () => {
           if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
@@ -119,7 +148,7 @@
           }
         });
 
-        // Save Route
+        // Save route to file
         document.getElementById("saveBtn").addEventListener("click", () => {
           if (path.length === 0) {
             alert("No path recorded yet.");
@@ -137,6 +166,25 @@
           a.click();
           URL.revokeObjectURL(url);
         });
+      }
+
+      // Compute heading between two points (used for arrow rotation)
+      function computeHeading(from, to) {
+        if (!from || !to) return 0;
+
+        const fromLat = (from.lat * Math.PI) / 180;
+        const fromLng = (from.lng * Math.PI) / 180;
+        const toLat = (to.lat * Math.PI) / 180;
+        const toLng = (to.lng * Math.PI) / 180;
+
+        const dLng = toLng - fromLng;
+
+        const y = Math.sin(dLng) * Math.cos(toLat);
+        const x =
+          Math.cos(fromLat) * Math.sin(toLat) -
+          Math.sin(fromLat) * Math.cos(toLat) * Math.cos(dLng);
+        const brng = Math.atan2(y, x);
+        return ((brng * 180) / Math.PI + 360) % 360;
       }
 
       window.onload = initMap;
