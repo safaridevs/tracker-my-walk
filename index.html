@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>Walking Route Tracker</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBt3PASmroPAJoJxnDAlTdA9SEDbnRh1Zg"></script>
     <style>
       html,
       body,
@@ -62,21 +62,32 @@
         marker = null,
         lastLatLng = null;
 
+      const arrowSVG = {
+        path: "M 0 -2 L 5 0 L 0 2 L 0 1 L -5 1 L -5 -1 L 0 -1 Z", // bold triangle arrow
+        fillColor: "#00cc66", // Spark green
+        fillOpacity: 1,
+        scale: 6, // Big & bold
+        strokeColor: "black",
+        strokeWeight: 2,
+        rotation: 0,
+        anchor: new google.maps.Point(0, 0),
+      };
+
       function initMap() {
         const defaultLocation = { lat: 35.687, lng: -105.9378 };
 
         map = new google.maps.Map(document.getElementById("map"), {
           zoom: 19,
           center: defaultLocation,
-          mapTypeId: "hybrid", // Shows satellite + street labels
+          mapTypeId: "hybrid",
         });
 
         polyline = new google.maps.Polyline({
           path: path,
           geodesic: true,
-          strokeColor: "#00BFFF", // Bright blue
+          strokeColor: "#00BFFF",
           strokeOpacity: 1.0,
-          strokeWeight: 6, // Thicker line
+          strokeWeight: 6,
           map: map,
         });
 
@@ -98,26 +109,18 @@
                 polyline.setPath(path);
                 map.setCenter(current);
 
-                // Rotate marker to show direction
+                // Rotate Spark-style arrow
+                const heading = computeHeading(lastLatLng, current);
+                arrowSVG.rotation = heading;
+
                 if (marker) {
-                  const heading = computeHeading(lastLatLng, current);
                   marker.setPosition(current);
-                  marker.setIcon({
-                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                    scale: 5,
-                    rotation: heading,
-                    strokeColor: "#FF4500",
-                  });
+                  marker.setIcon(arrowSVG);
                 } else {
                   marker = new google.maps.Marker({
                     position: current,
                     map: map,
-                    icon: {
-                      path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                      scale: 5,
-                      rotation: 0,
-                      strokeColor: "#FF4500",
-                    },
+                    icon: arrowSVG,
                     title: "You",
                   });
                 }
@@ -168,7 +171,6 @@
         });
       }
 
-      // Compute heading between two points (used for arrow rotation)
       function computeHeading(from, to) {
         if (!from || !to) return 0;
 
