@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Live Walking Tracker</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+    <title>Walking Route Tracker</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBt3PASmroPAJoJxnDAlTdA9SEDbnRh1Zg"></script>
     <style>
       html,
       body,
@@ -11,15 +11,54 @@
         margin: 0;
         padding: 0;
       }
+
+      .btn {
+        position: absolute;
+        z-index: 999;
+        padding: 12px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      #startBtn {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #28a745;
+        color: white;
+      }
+
+      #stopBtn {
+        top: 15px;
+        left: 15px;
+        background-color: #dc3545;
+        color: white;
+        display: none;
+      }
+
+      #saveBtn {
+        top: 15px;
+        right: 15px;
+        background-color: #007bff;
+        color: white;
+        display: none;
+      }
     </style>
   </head>
   <body>
     <div id="map"></div>
 
+    <button id="startBtn" class="btn">🚶 Start Tracking</button>
+    <button id="stopBtn" class="btn">🛑 Stop</button>
+    <button id="saveBtn" class="btn">💾 Save My Route</button>
+
     <script>
-      let map;
-      let path = [];
-      let polyline;
+      let map,
+        path = [],
+        polyline,
+        watchId = null;
 
       function initMap() {
         const defaultLocation = { lat: 35.687, lng: -105.9378 };
@@ -38,32 +77,66 @@
           map: map,
         });
 
-        if (navigator.geolocation) {
-          navigator.geolocation.watchPosition(
-            (position) => {
-              const current = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-              };
+        // Start Tracking
+        document.getElementById("startBtn").addEventListener("click", () => {
+          document.getElementById("startBtn").style.display = "none";
+          document.getElementById("stopBtn").style.display = "block";
+          document.getElementById("saveBtn").style.display = "block";
 
-              path.push(current);
-              polyline.setPath(path);
+          if (navigator.geolocation) {
+            watchId = navigator.geolocation.watchPosition(
+              (position) => {
+                const current = {
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude,
+                };
 
-              map.setCenter(current); // Follow user
-            },
-            (error) => {
-              console.error("Geolocation error:", error);
-              alert("Location access denied. Cannot track.");
-            },
-            {
-              enableHighAccuracy: true,
-              maximumAge: 0,
-              timeout: 10000,
-            }
-          );
-        } else {
-          alert("Geolocation is not supported by your browser.");
-        }
+                path.push(current);
+                polyline.setPath(path);
+                map.setCenter(current);
+              },
+              (error) => {
+                console.error("Geolocation error:", error);
+                alert("Location access denied.");
+              },
+              {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 10000,
+              }
+            );
+          } else {
+            alert("Geolocation is not supported by your browser.");
+          }
+        });
+
+        // Stop Tracking
+        document.getElementById("stopBtn").addEventListener("click", () => {
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            alert("Tracking stopped.");
+          }
+        });
+
+        // Save Route
+        document.getElementById("saveBtn").addEventListener("click", () => {
+          if (path.length === 0) {
+            alert("No path recorded yet.");
+            return;
+          }
+
+          const blob = new Blob([JSON.stringify(path, null, 2)], {
+            type: "application/json",
+          });
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "my-walking-route.json";
+          a.click();
+          URL.revokeObjectURL(url);
+        });
       }
 
       window.onload = initMap;
